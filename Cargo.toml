@@ -1,0 +1,17 @@
+[package]
+name = "dep-diet"
+version = "0.1.0"
+edition = "2024"
+description = "Fast CLI that analyzes JS project dependencies, flags bloat, suggests lighter alternatives."
+license = "MIT"
+keywords = ["npm", "dependencies", "bloat", "analyzer", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+tokio = { version = "1", features = ["full"] }
+clap = { version = "4", features = ["derive"] }
+tabled = "0.17"
+regex = "1"
