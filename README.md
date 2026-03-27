@@ -4,6 +4,8 @@ Fast Rust CLI that analyzes your JavaScript project's dependencies, shows per-pa
 
 ## Demo
 
+![dep-diet output](assets/demo.png)
+
 ```
 $ dep-diet --unused
 
