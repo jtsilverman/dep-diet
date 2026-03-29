@@ -63,7 +63,10 @@ pub async fn fetch_all(names: &[String]) -> Vec<PackageInfo> {
         let sem = semaphore.clone();
 
         handles.push(tokio::spawn(async move {
-            let _permit = sem.acquire().await.unwrap();
+            let _permit = match sem.acquire().await {
+                Ok(p) => p,
+                Err(_) => return None,
+            };
             fetch_package(&client, &name).await
         }));
     }
