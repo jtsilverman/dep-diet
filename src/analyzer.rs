@@ -96,4 +96,80 @@ mod tests {
         assert!(report.packages[1].is_bloated); // many-deps (dep count)
         assert!(!report.packages[2].is_bloated); // small-pkg
     }
+
+    #[test]
+    fn test_analyze_empty_packages() {
+        let report = analyze(vec![]);
+        assert_eq!(report.total_packages, 0);
+        assert_eq!(report.total_size, 0);
+        assert!(report.packages.is_empty());
+        assert!(report.unused.is_empty());
+        assert!(report.suggestions.is_empty());
+    }
+
+    #[test]
+    fn test_analyze_all_clean() {
+        let packages = vec![
+            PackageInfo { name: "tiny-a".into(), version: "1.0.0".into(), unpacked_size: 1_000, file_count: 2, dep_count: 0 },
+            PackageInfo { name: "tiny-b".into(), version: "1.0.0".into(), unpacked_size: 5_000, file_count: 3, dep_count: 2 },
+            PackageInfo { name: "tiny-c".into(), version: "1.0.0".into(), unpacked_size: 100_000, file_count: 10, dep_count: 10 },
+        ];
+
+        let report = analyze(packages);
+        assert_eq!(report.total_packages, 3);
+        assert!(report.packages.iter().all(|p| !p.is_bloated));
+    }
+
+    #[test]
+    fn test_analyze_boundary_size_exactly_500kb() {
+        // Exactly 500KB should NOT be bloated (threshold is >500KB)
+        let packages = vec![
+            PackageInfo { name: "boundary".into(), version: "1.0.0".into(), unpacked_size: 500_000, file_count: 10, dep_count: 5 },
+        ];
+        let report = analyze(packages);
+        assert!(!report.packages[0].is_bloated, "exactly 500KB should not be flagged");
+    }
+
+    #[test]
+    fn test_analyze_boundary_size_just_over_500kb() {
+        let packages = vec![
+            PackageInfo { name: "over-boundary".into(), version: "1.0.0".into(), unpacked_size: 500_001, file_count: 10, dep_count: 5 },
+        ];
+        let report = analyze(packages);
+        assert!(report.packages[0].is_bloated, "500,001 bytes should be flagged");
+        assert!(report.packages[0].bloat_reason.as_ref().unwrap().contains("KB unpacked"));
+    }
+
+    #[test]
+    fn test_analyze_boundary_deps_exactly_20() {
+        // Exactly 20 deps should NOT be bloated (threshold is >20)
+        let packages = vec![
+            PackageInfo { name: "many-deps".into(), version: "1.0.0".into(), unpacked_size: 10_000, file_count: 5, dep_count: 20 },
+        ];
+        let report = analyze(packages);
+        assert!(!report.packages[0].is_bloated, "exactly 20 deps should not be flagged");
+    }
+
+    #[test]
+    fn test_analyze_boundary_deps_just_over_20() {
+        let packages = vec![
+            PackageInfo { name: "too-many-deps".into(), version: "1.0.0".into(), unpacked_size: 10_000, file_count: 5, dep_count: 21 },
+        ];
+        let report = analyze(packages);
+        assert!(report.packages[0].is_bloated, "21 deps should be flagged");
+        assert!(report.packages[0].bloat_reason.as_ref().unwrap().contains("direct dependencies"));
+    }
+
+    #[test]
+    fn test_analyze_sorted_by_size_desc() {
+        let packages = vec![
+            PackageInfo { name: "small".into(), version: "1.0.0".into(), unpacked_size: 100, file_count: 1, dep_count: 0 },
+            PackageInfo { name: "large".into(), version: "1.0.0".into(), unpacked_size: 999_999, file_count: 50, dep_count: 5 },
+            PackageInfo { name: "medium".into(), version: "1.0.0".into(), unpacked_size: 50_000, file_count: 10, dep_count: 2 },
+        ];
+        let report = analyze(packages);
+        assert_eq!(report.packages[0].info.name, "large");
+        assert_eq!(report.packages[1].info.name, "medium");
+        assert_eq!(report.packages[2].info.name, "small");
+    }
 }
